@@ -3,9 +3,10 @@ import sys
 
 from PyQt5.QtCore import QSize, QObject, pyqtSignal, QThread
 from PyQt5.QtGui import QMovie
-from PyQt5 import QtWidgets, QtCore
+from PyQt5 import QtWidgets, QtCore, QtGui
 
 # import demo as slz
+import settings
 
 
 def show_message_error(a_title, a_text):
@@ -38,6 +39,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def init_ui(self):
         self.setWindowTitle("Converter")
+        self.setFixedSize(settings.APP_SIZE)
 
         self.form_widget = FormWidget(self)
         self.setCentralWidget(self.form_widget)
@@ -54,45 +56,61 @@ class FormWidget(QtWidgets.QWidget):
         self.selected_video = None
 
         self.init_ui()
-        self._load_methods()
+        # self._load_methods()
 
     def init_ui(self):
-        self.layout = QtWidgets.QVBoxLayout(self)
-        self.layout.setSpacing(20)
+        self.layout = QtWidgets.QGridLayout(self)
 
-        self.select_picture_btn = QtWidgets.QPushButton("Выбрать картинку")
-        self.select_picture_btn.clicked.connect(self._select_picture)
-        self.layout.addWidget(self.select_picture_btn)
+        # - background gif
+        self.bg_gif = QtGui.QMovie(settings.background_files['bg'])
+        self.bg_gif.setScaledSize(settings.APP_SIZE)
+        self.bg_gif.start()
 
-        self.select_video_btn = QtWidgets.QPushButton("Выбрать видео")
-        self.select_video_btn.clicked.connect(self._select_video)
-        self.layout.addWidget(self.select_video_btn)
+        self.bg_gif_lbl = QtWidgets.QLabel(self)
+        self.bg_gif_lbl.setMovie(self.bg_gif)
 
-        self.method_combo = QtWidgets.QComboBox(self)
-        self.method_combo.currentTextChanged.connect(self._on_method_changed)
-        self.layout.addWidget(self.method_combo)
+        # self.setCentralWidget(self.bg_gif_lbl)
 
-        self.adapt_scale_cbox = QtWidgets.QCheckBox(self)
-        self.adapt_scale_cbox.setText('Адаптироваться под \nпропорции исходника')
-        self.layout.addWidget(self.adapt_scale_cbox)
+        # - overlay
+        self.overlay_lbl = QtWidgets.QLabel()
+        self.overlay_lbl.setPixmap(QtGui.QPixmap(settings.background_files['overlay']))
 
-        self.relative_cbox = QtWidgets.QCheckBox(self)
-        self.relative_cbox.setText('Относительные \nкоординты')
-        self.layout.addWidget(self.relative_cbox)
-
-        self.convert_btn = QtWidgets.QPushButton("Сделать Пэздато")
-        self.convert_btn.clicked.connect(self._convert)
-        self.layout.addWidget(self.convert_btn)
-
-        self.movie = QMovie('ui_resources/loading.gif')
-        self.movie.setScaledSize(QSize(25, 25))
-
-        self.movie_label = QtWidgets.QLabel(self)
-        self.movie_label.setMovie(self.movie)
-        self.movie_label.setAlignment(QtCore.Qt.AlignCenter)
-        self.movie_label.setVisible(False)
-
-        self.layout.addWidget(self.movie_label)
+        self.layout.addWidget(self.bg_gif_lbl, 0, 0)
+        self.layout.addWidget(self.overlay_lbl, 0, 0)
+        #
+        # self.select_picture_btn = QtWidgets.QPushButton("Выбрать картинку")
+        # self.select_picture_btn.clicked.connect(self._select_picture)
+        # self.layout.addWidget(self.select_picture_btn)
+        #
+        # self.select_video_btn = QtWidgets.QPushButton("Выбрать видео")
+        # self.select_video_btn.clicked.connect(self._select_video)
+        # self.layout.addWidget(self.select_video_btn)
+        #
+        # self.method_combo = QtWidgets.QComboBox(self)
+        # self.method_combo.currentTextChanged.connect(self._on_method_changed)
+        # self.layout.addWidget(self.method_combo)
+        #
+        # self.adapt_scale_cbox = QtWidgets.QCheckBox(self)
+        # self.adapt_scale_cbox.setText('Адаптироваться под \nпропорции исходника')
+        # self.layout.addWidget(self.adapt_scale_cbox)
+        #
+        # self.relative_cbox = QtWidgets.QCheckBox(self)
+        # self.relative_cbox.setText('Относительные \nкоординты')
+        # self.layout.addWidget(self.relative_cbox)
+        #
+        # self.convert_btn = QtWidgets.QPushButton("Сделать Пэздато")
+        # self.convert_btn.clicked.connect(self._convert)
+        # self.layout.addWidget(self.convert_btn)
+        #
+        # self.movie = QMovie('ui_resources/loading.gif')
+        # self.movie.setScaledSize(QSize(25, 25))
+        #
+        # self.movie_label = QtWidgets.QLabel(self)
+        # self.movie_label.setMovie(self.movie)
+        # self.movie_label.setAlignment(QtCore.Qt.AlignCenter)
+        # self.movie_label.setVisible(False)
+        #
+        # self.layout.addWidget(self.movie_label)
 
         self.setLayout(self.layout)
 
