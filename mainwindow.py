@@ -59,8 +59,6 @@ class FormWidget(QtWidgets.QWidget):
         # self._load_methods()
 
     def init_ui(self):
-        self.layout = QtWidgets.QGridLayout(self)
-
         # - background gif
         self.bg_gif = QtGui.QMovie(settings.background_files['bg'])
         self.bg_gif.setScaledSize(settings.APP_SIZE)
@@ -69,14 +67,20 @@ class FormWidget(QtWidgets.QWidget):
         self.bg_gif_lbl = QtWidgets.QLabel(self)
         self.bg_gif_lbl.setMovie(self.bg_gif)
 
-        # self.setCentralWidget(self.bg_gif_lbl)
-
         # - overlay
         self.overlay_lbl = QtWidgets.QLabel()
         self.overlay_lbl.setPixmap(QtGui.QPixmap(settings.background_files['overlay']))
 
+        # 
+
+        # - layout
+        self.layout = QtWidgets.QGridLayout(self)
+
         self.layout.addWidget(self.bg_gif_lbl, 0, 0)
         self.layout.addWidget(self.overlay_lbl, 0, 0)
+
+
+
         #
         # self.select_picture_btn = QtWidgets.QPushButton("Выбрать картинку")
         # self.select_picture_btn.clicked.connect(self._select_picture)
