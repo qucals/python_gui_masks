@@ -21,7 +21,7 @@ background_files = [
 button_files = [
     {os.path.splitext(file)[0]: os.path.join(os.path.abspath(root), file) for file in files if
      file not in exception_files}
-    for root, _, files in os.walk(BACKGROUND_PATH)
+    for root, _, files in os.walk(BUTTONS_PATH)
 ][0]
 
 font_files = [
