@@ -1,4 +1,3 @@
-
 class MusicController(object):
     def __init__(self):
         self.events_songs_path = {}

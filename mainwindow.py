@@ -2,30 +2,23 @@ import os.path
 import sys
 from typing import Tuple
 
-from PyQt5.QtCore import QSize, QObject, pyqtSignal, QThread, Qt, QUrl
+from PyQt5.QtCore import QSize, QObject, pyqtSignal, QThread, Qt
 from PyQt5 import QtWidgets, QtCore, QtGui
 
-# import demo as slz
-from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
-from PyQt5.QtMultimediaWidgets import QVideoWidget
+import demo as slz
 from cv2 import cv2
 
 import settings
 
 
-# TODO: Убрать эту функцию
-def show_message_error(a_title, a_text):
-    msg = QtWidgets.QMessageBox()
-    msg.setIcon(QtWidgets.QMessageBox.Critical)
-    msg.setWindowTitle(a_title)
-    msg.setText(a_text)
-    msg.exec()
-
-
-def show_message(a_title, a_text):
+def show_message_box(a_title, a_text, a_icon=None):
     msg = QtWidgets.QMessageBox()
     msg.setWindowTitle(a_title)
     msg.setText(a_text)
+
+    if a_icon is not None:
+        msg.setIcon(a_icon)
+
     msg.exec()
 
 
@@ -38,6 +31,7 @@ def convert_cv_qt(cv_img, size):
     p = convert_to_Qt_format.scaled(size[0], size[1], Qt.KeepAspectRatio)
     return QtGui.QPixmap.fromImage(p)
 
+
 def get_picture_of_video(a_path, a_size):
     cap = cv2.VideoCapture(a_path)
     _, cv_img = cap.read()
@@ -48,7 +42,7 @@ class Worker(QObject):
     finished = pyqtSignal()
 
     def run(self):
-        # slz.main()
+        slz.main()
         self.finished.emit()
 
 
@@ -79,54 +73,22 @@ class FormWidget(QtWidgets.QWidget):
         self._drag_left_region = (QtCore.QPoint(24, 27), QtCore.QPoint(736, 729))
         self._drag_right_region = (QtCore.QPoint(771, 19), QtCore.QPoint(1478, 723))
 
-        # PyQt5.QtCore.QPoint(110, 890)
-        # PyQt5.QtCore.QPoint(472, 915)
         self._bair_combopart_region = (QtCore.QPoint(110, 890), QtCore.QPoint(472, 915))
-
-        # PyQt5.QtCore.QPoint(112, 932)
-        # PyQt5.QtCore.QPoint(471, 954)
         self._fashion_combopart_region = (QtCore.QPoint(112, 932), QtCore.QPoint(471, 954))
-
-        # PyQt5.QtCore.QPoint(111, 970)
-        # PyQt5.QtCore.QPoint(471, 997)
         self._mgif_combopart_region = (QtCore.QPoint(111, 970), QtCore.QPoint(471, 997))
-
-        # PyQt5.QtCore.QPoint(117, 1012)
-        # PyQt5.QtCore.QPoint(469, 1034)
         self._nemo_combopart_region = (QtCore.QPoint(117, 1012), QtCore.QPoint(469, 1034))
-
-        # PyQt5.QtCore.QPoint(118, 1055)
-        # PyQt5.QtCore.QPoint(467, 1075)
         self._taichi_combopart_region = (QtCore.QPoint(118, 1055), QtCore.QPoint(467, 1075))
-
-        # PyQt5.QtCore.QPoint(117, 1092)
-        # PyQt5.QtCore.QPoint(467, 1118)
         self._taichi_adv_combopart_region = (QtCore.QPoint(117, 1092), QtCore.QPoint(467, 1118))
-
-        # PyQt5.QtCore.QPoint(117, 1142)
-        # PyQt5.QtCore.QPoint(467, 1170)
         self._vox_combopart_region = (QtCore.QPoint(117, 1142), QtCore.QPoint(467, 1170))
-
-        # PyQt5.QtCore.QPoint(118, 1189)
-        # PyQt5.QtCore.QPoint(468, 1209)
         self._vox_adv_combopart_region = (QtCore.QPoint(118, 1189), QtCore.QPoint(468, 1209))
 
         # Convert
-        # PyQt5.QtCore.QPoint(517, 1114)
-        # PyQt5.QtCore.QPoint(1009, 1228)
         self._convert_btn_region = (QtCore.QPoint(517, 1114), QtCore.QPoint(1009, 1228))
 
         # Checkbox
-        # PyQt5.QtCore.QPoint(1040, 810)
-        # PyQt5.QtCore.QPoint(1132, 875)
         self._adaptive_checkbox_region = (QtCore.QPoint(1040, 810), QtCore.QPoint(1132, 875))
-
-        # PyQt5.QtCore.QPoint(1042, 951)
-        # PyQt5.QtCore.QPoint(1133, 1014)
         self._relative_checkbox_region = (QtCore.QPoint(1042, 951), QtCore.QPoint(1133, 1014))
 
-        # PyQt5.QtCore.QPoint(402, 1291)
-        # PyQt5.QtCore.QPoint(1073, 1324)
         self._user_agreement_region = (QtCore.QPoint(402, 1291), QtCore.QPoint(1073, 1324))
 
         self._load_methods()
@@ -395,11 +357,13 @@ class FormWidget(QtWidgets.QWidget):
             self.__convert()
         else:
             if self.selected_picture is None:
-                show_message_error('Ошибка', 'Картинка не выбрана')
+                show_message_box('Ошибка', 'Картинка не выбрана', QtWidgets.QMessageBox.Critical)
             elif self.selected_video is None:
-                show_message_error('Ошибка', 'Видео не выбрано')
+                show_message_box('Ошибка', 'Видео не выбрано', QtWidgets.QMessageBox.Critical)
             elif len(self.methods) == 0:
-                show_message_error('Ошибка', 'Не загружен ни один метод конвертации')
+                show_message_box('Ошибка', 'Не загружен ни один метод конвертации', QtWidgets.QMessageBox.Critical)
+            elif self.__selected_config is None:
+                show_message_box('Ошибка', 'Не выбран метод обработки', QtWidgets.QMessageBox.Critical)
             else:
                 dirname = QtWidgets.QFileDialog.getExistingDirectory(self, 'Выберите место для сохранение видео', '.')
                 if dirname != '':
@@ -422,11 +386,13 @@ class FormWidget(QtWidgets.QWidget):
         checkpoints_path = 'checkpoints'
 
         if not os.path.exists(config_path):
-            show_message_error('Ошибка чтения методов конвертации',
-                               f'Папка с конфигурациями конвертации ({config_path}) не найдена!')
+            show_message_box('Ошибка чтения методов конвертации',
+                             f'Папка с конфигурациями конвертации ({config_path}) не найдена!',
+                             QtWidgets.QMessageBox.Critical)
         elif not os.path.exists(checkpoints_path):
-            show_message_error('Ошибка чтения методов конвертации',
-                               f'Папка с чекпоинтами ({checkpoints_path}) не найдена!')
+            show_message_box('Ошибка чтения методов конвертации',
+                             f'Папка с чекпоинтами ({checkpoints_path}) не найдена!',
+                             QtWidgets.QMessageBox.Critical)
         else:
             configs = {}
             checkpoints = {}
@@ -439,8 +405,9 @@ class FormWidget(QtWidgets.QWidget):
 
             for file, file_path in configs.items():
                 if file not in checkpoints:
-                    show_message_error('Ошибка поиска файла',
-                                       f'Не найден файл {file}.yaml для файла {file}.tar')
+                    show_message_box('Ошибка поиска файла',
+                                     f'Не найден файл {file}.yaml для файла {file}.tar',
+                                     QtWidgets.QMessageBox.Critical)
                 else:
                     self.methods[file] = (file_path, checkpoints[file])
 
