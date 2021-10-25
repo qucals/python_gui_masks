@@ -2,10 +2,14 @@ import os.path
 import sys
 from typing import Tuple
 
-from PyQt5.QtCore import QSize, QObject, pyqtSignal, QThread
+from PyQt5.QtCore import QSize, QObject, pyqtSignal, QThread, Qt, QUrl
 from PyQt5 import QtWidgets, QtCore, QtGui
 
 # import demo as slz
+from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
+from PyQt5.QtMultimediaWidgets import QVideoWidget
+from cv2 import cv2
+
 import settings
 
 
@@ -23,6 +27,21 @@ def show_message(a_title, a_text):
     msg.setWindowTitle(a_title)
     msg.setText(a_text)
     msg.exec()
+
+
+def convert_cv_qt(cv_img, size):
+    """Convert from an opencv image to QPixmap"""
+    rgb_image = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
+    h, w, ch = rgb_image.shape
+    bytes_per_line = ch * w
+    convert_to_Qt_format = QtGui.QImage(rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
+    p = convert_to_Qt_format.scaled(size[0], size[1], Qt.KeepAspectRatio)
+    return QtGui.QPixmap.fromImage(p)
+
+def get_picture_of_video(a_path, a_size):
+    cap = cv2.VideoCapture(a_path)
+    _, cv_img = cap.read()
+    return convert_cv_qt(cv_img, a_size)
 
 
 class Worker(QObject):
@@ -110,8 +129,8 @@ class FormWidget(QtWidgets.QWidget):
         # PyQt5.QtCore.QPoint(1073, 1324)
         self._user_agreement_region = (QtCore.QPoint(402, 1291), QtCore.QPoint(1073, 1324))
 
+        self._load_methods()
         self.init_ui()
-        # self._load_methods()
 
     def init_ui(self):
         self.setAcceptDrops(True)
@@ -139,14 +158,50 @@ class FormWidget(QtWidgets.QWidget):
         self._overlay_lbl = QtWidgets.QLabel()
         self._overlay_lbl.setPixmap(QtGui.QPixmap(settings.background_files['overlay']))
 
+        # - columns overlay
+        # - columns names
+        self._drag_names = QtWidgets.QLabel()
+        self._drag_names.setPixmap(QtGui.QPixmap(settings.background_files['column_names']))
+
+        # -- left
+        self.left_drag_overlay = FadingImage(
+            a_parent=self,
+            a_active_img=QtGui.QPixmap(settings.background_files['left_column_overlay']),
+            a_region=self._drag_left_region
+        )
+
+        self.left_drag_icon = FadingImage(
+            a_parent=self,
+            a_inactive_img=QtGui.QPixmap(settings.button_files['photo']),
+            a_active_img=QtGui.QPixmap(settings.button_files['photo_selection']),
+            a_region=self._drag_left_region
+        )
+
+        # -- right
+        self.right_drag_overlay = FadingImage(
+            a_parent=self,
+            a_active_img=QtGui.QPixmap(settings.background_files['right_column_overlay']),
+            a_region=self._drag_right_region
+        )
+
+        self.right_drag_icon = FadingImage(
+            a_parent=self,
+            a_inactive_img=QtGui.QPixmap(settings.button_files['video']),
+            a_active_img=QtGui.QPixmap(settings.button_files['video_selection']),
+            a_region=self._drag_right_region
+        )
+
         # - convert button
         self._convert_btn = InvisibleButton(
             a_parent=self,
             a_region=self._convert_btn_region
         )
-        # self._convert_btn.clicked.connect(
-        #     lambda: self._test()
-        # )
+
+        # - user agreement btn
+        self._user_agreement_btn = InvisibleButton(
+            a_parent=self,
+            a_region=self._user_agreement_region
+        )
 
         # - checkbox
         self._checkbox_select_controller = SelectController()
@@ -173,38 +228,17 @@ class FormWidget(QtWidgets.QWidget):
         self._relative_chxbox.move(1036, 900)
         self._relative_chxbox.set_size(QSize(89, 107))
 
-        # - columns overlay
-        # -- left
-        self.left_drag_overlay = FadingImage(
-            a_parent=self,
-            a_img=QtGui.QPixmap(settings.background_files['left_column_overlay']),
-            a_region=self._drag_left_region
-        )
+        self._picture_of_image = QtWidgets.QLabel(self)
+        self._picture_of_image.setScaledContents(True)
+        self._picture_of_image.setFixedSize(QSize(712, 725))
+        self._picture_of_image.move(12, 20)
 
-        self.left_drag_icon = ImageButton(
-            a_parent=self,
-            a_inactive_img=QtGui.QPixmap(settings.button_files['photo']),
-            a_active_img=QtGui.QPixmap(settings.button_files['photo_selection']),
-            a_region=self._drag_left_region
-        )
-
-        # -- right
-        self.right_drag_overlay = FadingImage(
-            a_parent=self,
-            a_img=QtGui.QPixmap(settings.background_files['right_column_overlay']),
-            a_region=self._drag_right_region
-        )
-
-        self.right_drag_icon = ImageButton(
-            a_parent=self,
-            a_inactive_img=QtGui.QPixmap(settings.button_files['video']),
-            a_active_img=QtGui.QPixmap(settings.button_files['video_selection']),
-            a_region=self._drag_right_region
-        )
+        self._picture_of_video = QtWidgets.QLabel(self)
+        self._picture_of_video.setScaledContents(True)
+        self._picture_of_video.resize(712, 725)
+        self._picture_of_video.move(758, 20)
 
         # - combobox
-        # TODO: Можно автоматизировать
-
         comboparts = {
             'bair': ([path for file, path in settings.font_files.items() if 'bair_' in file], self._bair_combopart_region),
             'fashion': ([path for file, path in settings.font_files.items() if 'fashion_' in file], self._fashion_combopart_region),
@@ -260,6 +294,7 @@ class FormWidget(QtWidgets.QWidget):
 
         self.layout.addWidget(self._bg_gif_lbl, 0, 0)
         self.layout.addWidget(self._overlay_lbl, 0, 0)
+        self.layout.addWidget(self._drag_names, 0, 0)
 
         for img in self._all_changeable_images:
             self.__add_changeable_image_to_layout(self.layout, img)
@@ -314,23 +349,16 @@ class FormWidget(QtWidgets.QWidget):
         for part in self._chbox_parts:
             part.change_state(e.pos(), True)
 
+        if self._user_agreement_btn.is_clicked(e.pos()):
+            pass
+
         if self._convert_btn.is_clicked(e.pos()):
-            print('clicked')
+            self._convert(False)
 
     def dragEnterEvent(self, e):
-        self.dropEvent(e)
+        self.dragMoveEvent(e)
 
     def dragMoveEvent(self, e):
-        self.dropEvent(e)
-
-    def dragLeaveEvent(self, e):
-        self.left_drag_overlay.change_to_inactive()
-        self.left_drag_icon.change_to_inactive()
-
-        self.right_drag_overlay.change_to_inactive()
-        self.right_drag_icon.change_to_inactive()
-
-    def dropEvent(self, e):
         if e.mimeData().hasImage:
             self.left_drag_overlay.change_state(e.pos())
             self.left_drag_icon.change_state(e.pos())
@@ -342,6 +370,51 @@ class FormWidget(QtWidgets.QWidget):
         else:
             e.ignore()
 
+    def dragLeaveEvent(self, e):
+        self.left_drag_overlay.change_to_inactive()
+        self.left_drag_icon.change_to_inactive()
+
+        self.right_drag_overlay.change_to_inactive()
+        self.right_drag_icon.change_to_inactive()
+
+    def dropEvent(self, e):
+        if e.mimeData().hasImage:
+            e.setDropAction(Qt.CopyAction)
+
+            self.left_drag_overlay.change_state(e.pos())
+            self.left_drag_icon.change_state(e.pos())
+
+            if self.left_drag_overlay.activated:
+                self.load_picture(e.mimeData().urls()[0].toLocalFile())
+
+            self.right_drag_overlay.change_state(e.pos())
+            self.right_drag_icon.change_state(e.pos())
+
+            if self.right_drag_overlay.activated:
+                self.load_video(e.mimeData().urls()[0].toLocalFile())
+
+            self.dragLeaveEvent(e)
+
+            e.accept()
+        else:
+            e.ignore()
+
+    def load_picture(self, a_path):
+        self.selected_picture = a_path
+        self._set_ui_picture(a_path)
+
+    def _set_ui_picture(self, a_path):
+        img = QtGui.QPixmap(a_path)
+        self._picture_of_image.setPixmap(img)
+
+    def load_video(self, a_path):
+        self.selected_video = a_path
+        self._set_ui_video(a_path)
+
+    def _set_ui_video(self, a_path):
+        img = get_picture_of_video(a_path, (712, 725))
+        self._picture_of_video.setPixmap(img)
+
     def _select_picture(self):
         filename, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Выбрать файл", ".")
         if filename != '':
@@ -352,12 +425,7 @@ class FormWidget(QtWidgets.QWidget):
         if filename != '':
             self.selected_video = filename
 
-    def _on_method_changed(self, method):
-        self.selected_config, self.selected_checkpoint = self.methods[method]
-
-    def _convert(self, _a_disable_checks=True):
-        _a_disable_checks = True
-
+    def _convert(self, _a_disable_checks=False):
         if _a_disable_checks:
             self.__convert()
         else:
@@ -372,12 +440,13 @@ class FormWidget(QtWidgets.QWidget):
                 if dirname != '':
                     result_path = os.path.join(dirname, 'result.mp4')
 
-                    new_args = ['--config', self.selected_config, '--checkpoint', self.selected_checkpoint,
+                    new_args = ['--config', self.__selected_config, '--checkpoint', self.__selected_checkpoint,
                                 '--source_image', self.selected_picture, '--driving_video', self.selected_video,
                                 '--result_video', result_path]
-                    if self.adapt_scale_cbox.isChecked():
+
+                    if self._adaptive_chxbox.selected:
                         new_args.append('--adapt_scale')
-                    if self.relative_cbox.isChecked():
+                    if self._relative_chxbox.selected:
                         new_args.append('--relative')
 
                     sys.argv = sys.argv + new_args
@@ -410,9 +479,6 @@ class FormWidget(QtWidgets.QWidget):
                 else:
                     self.methods[file] = (file_path, checkpoints[file])
 
-            for method in self.methods.keys():
-                self.method_combo.addItem(method)
-
     def __convert(self):
         self.thread = QThread()
         self.worker = Worker()
@@ -431,13 +497,12 @@ class FormWidget(QtWidgets.QWidget):
 
     def __start_converting_ui(self):
         self.setEnabled(False)
-        self.movie_label.setVisible(True)
-        self.movie.start()
+        self._loader_gif.start()
 
     def __stop_converting_ui(self):
         self.setEnabled(True)
-        self.movie_label.setVisible(False)
-        self.movie.stop()
+        self._loader_gif.jumpToFrame(0)
+        self._loader_gif.stop()
 
     @staticmethod
     def __add_changeable_image_to_layout(a_layout: QtWidgets.QGridLayout, a_img):
@@ -454,6 +519,18 @@ class FormWidget(QtWidgets.QWidget):
     def __is_point_in_region(a_point: QtCore.QPoint, a_region_begin: QtCore.QPoint, a_region_end: QtCore.QPoint):
         return a_region_begin.x() <= a_point.x() <= a_region_end.x() and \
                a_region_begin.y() <= a_point.y() <= a_region_end.y()
+
+    @property
+    def __selected_config(self):
+        for config, inst in self._combo_parts.items():
+            if inst == self._combo_select_controller.selected_inst:
+                return self.methods[f'{config}-256'][0]
+
+    @property
+    def __selected_checkpoint(self):
+        for checkpoint, inst in self._combo_parts.items():
+            if inst == self._combo_select_controller.selected_inst:
+                return self.methods[f'{checkpoint}-256'][1]
 
 
 class SelectController(object):
@@ -472,8 +549,6 @@ class ImageButton(QObject):
 
         if a_selected_img is None:
             a_selected_img = QtGui.QPixmap()
-        if a_select_controller is None:
-            a_select_controller = SelectController()
 
         self.select_controller = a_select_controller
 
@@ -494,13 +569,20 @@ class ImageButton(QObject):
         self.activated = False
         self.selected = False
 
+        self._is_hidden = False
+        self._save_visible_inst = None
+
     def change_state(self, a_pos, a_is_clicked=False):
+        if self._is_hidden:
+            return
+
         if self._is_point_in_region(a_pos):
             if a_is_clicked:
-                if self.select_controller.selected_inst != self:
-                    if self.select_controller.selected_inst is not None:
-                        self.select_controller.selected_inst.change_to_inactive()
-                    self.select_controller.set_selected(self)
+                if self.select_controller is not None:
+                    if self.select_controller.selected_inst != self:
+                        if self.select_controller.selected_inst is not None:
+                            self.select_controller.selected_inst.change_to_inactive()
+                        self.select_controller.set_selected(self)
                 self.change_to_selected()
             else:
                 if self.activated:
@@ -509,8 +591,9 @@ class ImageButton(QObject):
                     self.change_to_active()
         else:
             if self.selected:
-                if self.select_controller.selected_inst is not None and self.select_controller.selected_inst != self:
-                    self.change_to_inactive()
+                if self.select_controller is not None:
+                    if self.select_controller.selected_inst is not None and self.select_controller.selected_inst != self:
+                        self.change_to_inactive()
 
     def get_active_img_inst(self) -> QtWidgets.QLabel:
         return self.active_img_lbl
@@ -522,6 +605,9 @@ class ImageButton(QObject):
         return self.selected_img_lbl
 
     def change_to_active(self):
+        if self._is_hidden:
+            return
+
         self.activated = True
         self.selected = False
         self.active_img_lbl.setVisible(True)
@@ -529,6 +615,9 @@ class ImageButton(QObject):
         self.selected_img_lbl.setVisible(False)
 
     def change_to_inactive(self):
+        if self._is_hidden:
+            return
+
         self.activated = False
         self.selected = False
         self.active_img_lbl.setVisible(False)
@@ -536,11 +625,30 @@ class ImageButton(QObject):
         self.selected_img_lbl.setVisible(False)
 
     def change_to_selected(self):
+        if self._is_hidden:
+            return
+
         self.activated = False
         self.selected = True
         self.active_img_lbl.setVisible(False)
         self.inactive_img_lbl.setVisible(False)
         self.selected_img_lbl.setVisible(True)
+
+    def hide(self):
+        if self.activated:
+            self._save_visible_inst = self.active_img_lbl
+        elif self.selected:
+            self._save_visible_inst = self.selected_img_lbl
+        else:
+            self._save_visible_inst = self.inactive_img_lbl
+        self._save_visible_inst.setVisible(False)
+        self._is_hidden = True
+
+    def show(self):
+        if not self._is_hidden and self._save_visible_inst is not None:
+            self._save_visible_inst.setVisible(True)
+            self._is_hidden = False
+            self._save_visible_inst = None
 
     def is_selected(self):
         return self.selected
@@ -576,8 +684,38 @@ class ComboItem(ImageButton):
 
 
 class FadingImage(ImageButton):
-    def __init__(self, a_parent, a_img: QtGui.QPixmap, a_region: Tuple[QtCore.QPoint, QtCore.QPoint]):
-        super(FadingImage, self).__init__(a_parent, a_img, QtGui.QPixmap(), a_region)
+    def __init__(self, a_parent, a_active_img: QtGui.QPixmap, a_region: Tuple[QtCore.QPoint, QtCore.QPoint],
+                 a_inactive_img: QtGui.QPixmap = None):
+        if a_inactive_img is None:
+            a_inactive_img = QtGui.QPixmap()
+        super(FadingImage, self).__init__(a_parent, a_active_img, a_inactive_img, a_region)
+
+        self.is_constant = False
+        self._save_active_img = None
+
+    def set_constant_image(self, a_img: QtGui.QPixmap):
+        self.is_constant = True
+        self._save_active_img = self.active_img_lbl.pixmap()
+
+        self.change_to_inactive()
+        self.inactive_img_lbl.setPixmap(a_img)
+
+    def unset_constant_image(self):
+        if self.is_constant:
+            self.is_constant = False
+            self.active_img_lbl.setPixmap(self._save_active_img)
+            self._save_active_img = None
+
+    def change_state(self, a_pos, a_is_clicked=False):
+        if self.is_constant:
+            return
+
+        if self._is_point_in_region(a_pos):
+            if not self.activated:
+                self.change_to_active()
+        else:
+            if self.activated:
+                self.change_to_inactive()
 
     def get_img_inst(self):
         return super(FadingImage, self).get_active_img_inst()
