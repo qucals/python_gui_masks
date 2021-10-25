@@ -299,46 +299,7 @@ class FormWidget(QtWidgets.QWidget):
         for img in self._all_changeable_images:
             self.__add_changeable_image_to_layout(self.layout, img)
 
-        #
-        # self.select_picture_btn = QtWidgets.QPushButton("Выбрать картинку")
-        # self.select_picture_btn.clicked.connect(self._select_picture)
-        # self.layout.addWidget(self.select_picture_btn)
-        #
-        # self.select_video_btn = QtWidgets.QPushButton("Выбрать видео")
-        # self.select_video_btn.clicked.connect(self._select_video)
-        # self.layout.addWidget(self.select_video_btn)
-        #
-        # self.method_combo = QtWidgets.QComboBox(self)
-        # self.method_combo.currentTextChanged.connect(self._on_method_changed)
-        # self.layout.addWidget(self.method_combo)
-        #
-        # self.adapt_scale_cbox = QtWidgets.QCheckBox(self)
-        # self.adapt_scale_cbox.setText('Адаптироваться под \nпропорции исходника')
-        # self.layout.addWidget(self.adapt_scale_cbox)
-        #
-        # self.relative_cbox = QtWidgets.QCheckBox(self)
-        # self.relative_cbox.setText('Относительные \nкоординты')
-        # self.layout.addWidget(self.relative_cbox)
-        #
-        # self.convert_btn = QtWidgets.QPushButton("Сделать Пэздато")
-        # self.convert_btn.clicked.connect(self._convert)
-        # self.layout.addWidget(self.convert_btn)
-        #
-        # self.movie = QMovie('ui_resources/loading.gif')
-        # self.movie.setScaledSize(QSize(25, 25))
-        #
-        # self.movie_label = QtWidgets.QLabel(self)
-        # self.movie_label.setMovie(self.movie)
-        # self.movie_label.setAlignment(QtCore.Qt.AlignCenter)
-        # self.movie_label.setVisible(False)
-        #
-        # self.layout.addWidget(self.movie_label)
-
         self.setLayout(self.layout)
-
-    # def mouseMoveEvent(self, e):
-    #     for img in self._all_changeable_images:
-    #         img.change_state(e.pos())
 
     def mousePressEvent(self, e):
         print(e.pos())
@@ -350,7 +311,7 @@ class FormWidget(QtWidgets.QWidget):
             part.change_state(e.pos(), True)
 
         if self._user_agreement_btn.is_clicked(e.pos()):
-            pass
+            self.open_user_agreement()
 
         if self._convert_btn.is_clicked(e.pos()):
             self._convert(False)
@@ -414,6 +375,10 @@ class FormWidget(QtWidgets.QWidget):
     def _set_ui_video(self, a_path):
         img = get_picture_of_video(a_path, (712, 725))
         self._picture_of_video.setPixmap(img)
+
+    def open_user_agreement(self):
+        dialog = UserAgreementDialog(self)
+        dialog.exec()
 
     def _select_picture(self):
         filename, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Выбрать файл", ".")
@@ -730,3 +695,37 @@ class InvisibleButton(ImageButton):
 
     def is_clicked(self, e_pos):
         return self._is_point_in_region(e_pos)
+
+
+class UserAgreementDialog(QtWidgets.QDialog):
+    def __init__(self, flags, *args, **kwargs):
+        super().__init__(flags, *args, **kwargs)
+        self.init_ui()
+
+    def init_ui(self):
+        self.setWindowTitle('Eblya')
+        self.setFixedSize(settings.USER_AGREEMENT_DIALOG_SIZE)
+
+        self._background_lbl = QtWidgets.QLabel()
+        self._background_lbl.setPixmap(QtGui.QPixmap(settings.background_files['user_agreement']))
+        self._background_lbl.setFixedSize(QSize(640, 960))
+        self._background_lbl.setScaledContents(True)
+
+        # PyQt5.QtCore.QPoint(463, 23)
+        # PyQt5.QtCore.QPoint(636, 52)
+        self._exit_btn_region = (QtCore.QPoint(463, 24), QtCore.QPoint(636, 52))
+        self._exit_btn = InvisibleButton(
+            a_parent=self,
+            a_region=self._exit_btn_region
+        )
+
+        self.layout = QtWidgets.QGridLayout(self)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+
+        self.layout.addWidget(self._background_lbl)
+
+        self.show()
+
+    def mousePressEvent(self, e):
+        if self._exit_btn.is_clicked(e.pos()):
+            self.close()
