@@ -3,6 +3,7 @@ import os
 from PyQt5.QtCore import QSize
 
 APP_SIZE = QSize(1488, 1337)
+DIALOG_SIZE = QSize(1279, 1920)
 
 SOURCE_PATH = 'ui_resources'
 

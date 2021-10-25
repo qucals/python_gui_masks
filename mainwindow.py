@@ -10,6 +10,7 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 import settings
 
 
+# TODO: Убрать эту функцию
 def show_message_error(a_title, a_text):
     msg = QtWidgets.QMessageBox()
     msg.setIcon(QtWidgets.QMessageBox.Critical)
@@ -90,7 +91,7 @@ class FormWidget(QtWidgets.QWidget):
 
         # PyQt5.QtCore.QPoint(118, 1189)
         # PyQt5.QtCore.QPoint(468, 1209)
-        self._vox_adv_combopart_region = (QtCore.QPoint(110, 472), QtCore.QPoint(472, 915))
+        self._vox_adv_combopart_region = (QtCore.QPoint(118, 1189), QtCore.QPoint(468, 1209))
 
         # PyQt5.QtCore.QPoint(118, 1226)
         # PyQt5.QtCore.QPoint(468, 1247)
@@ -109,11 +110,16 @@ class FormWidget(QtWidgets.QWidget):
         # PyQt5.QtCore.QPoint(1133, 1014)
         self._relative_checkbox_region = (QtCore.QPoint(1042, 951), QtCore.QPoint(1133, 1014))
 
+        # PyQt5.QtCore.QPoint(402, 1291)
+        # PyQt5.QtCore.QPoint(1073, 1324)
+        self._user_agreement_region = (QtCore.QPoint(402, 1291), QtCore.QPoint(1073, 1324))
+
         self.init_ui()
         # self._load_methods()
 
     def init_ui(self):
         self.setAcceptDrops(True)
+        self.setMouseTracking(True)
 
         # - background gif
         self.bg_gif = QtGui.QMovie(settings.background_files['bg'])
@@ -123,10 +129,40 @@ class FormWidget(QtWidgets.QWidget):
         self.bg_gif_lbl = QtWidgets.QLabel(self)
         self.bg_gif_lbl.setMovie(self.bg_gif)
 
+        # - loader
+        self.loader_gif = QtGui.QMovie(settings.button_files['loading'])
+        self.loader_gif.setScaledSize(QSize(349, 245))
+        self.loader_gif.jumpToFrame(0)
+
+        self.loader_gif_lbl = QtWidgets.QLabel(self)
+        self.loader_gif_lbl.setMovie(self.loader_gif)
+        self.loader_gif_lbl.setFixedSize(QSize(349, 245))
+        self.loader_gif_lbl.move(572, 785)
+
         # - overlay
         self.overlay_lbl = QtWidgets.QLabel()
         self.overlay_lbl.setPixmap(QtGui.QPixmap(settings.background_files['overlay']))
-        self.overlay_lbl.setFixedSize(settings.APP_SIZE)
+
+        # - checkbox
+        self._adaptive_chxbox = ChangeableImage(
+            a_parent=self,
+            a_active_img=QtGui.QPixmap(),
+            a_inactive_img=QtGui.QPixmap(),
+            a_selected_img=QtGui.QPixmap(settings.button_files['checkbox']),
+            a_region=self._adaptive_checkbox_region
+        )
+        self._adaptive_chxbox.move(1036, 760)
+        self._adaptive_chxbox.set_size(QSize(89, 107))
+
+        self._relative_chxbox = ChangeableImage(
+            a_parent=self,
+            a_active_img=QtGui.QPixmap(),
+            a_inactive_img=QtGui.QPixmap(),
+            a_selected_img=QtGui.QPixmap(settings.button_files['checkbox']),
+            a_region=self._relative_checkbox_region
+        )
+        self._relative_chxbox.move(1036, 900)
+        self._relative_chxbox.set_size(QSize(89, 107))
 
         # - columns overlay
         # -- left
@@ -166,7 +202,6 @@ class FormWidget(QtWidgets.QWidget):
             a_selected_img=QtGui.QPixmap(settings.font_files['bair_256ss']),
             a_region=self._bair_combopart_region
         )
-        # self._bair_combopart.move()
 
         self._fashion_combopart = ChangeableImage(
             a_parent=self,
@@ -224,26 +259,40 @@ class FormWidget(QtWidgets.QWidget):
             a_region=self._vox_combopart_region
         )
 
+        self._all_combopart = [
+            self._bair_combopart,
+            self._fashion_combopart,
+            self._mgif_combopart,
+            self._nemo_combopart,
+            self._taichi_adv_combopart,
+            self._taichi_combopart,
+            self._vox_adv_combopart,
+            self._vox_combopart,
+        ]
+
+        self._all_changeable_images = [
+            self.left_drag_overlay,
+            self.left_drag_icon,
+            self.right_drag_overlay,
+            self.right_drag_icon,
+            *self._all_combopart
+        ]
+
         # - layout
         self.layout = QtWidgets.QGridLayout(self)
+        self.layout.setContentsMargins(0, 0, 0, 0)
 
         self.layout.addWidget(self.bg_gif_lbl, 0, 0)
         self.layout.addWidget(self.overlay_lbl, 0, 0)
 
-        self.__add_changeable_image_to_layout(self.layout, self.left_drag_overlay)
-        self.__add_changeable_image_to_layout(self.layout, self.left_drag_icon)
+        for img in self._all_changeable_images:
+            self.__add_changeable_image_to_layout(self.layout, img)
 
-        self.__add_changeable_image_to_layout(self.layout, self.right_drag_overlay)
-        self.__add_changeable_image_to_layout(self.layout, self.right_drag_icon)
-
-        self.__add_changeable_image_to_layout(self.layout, self._bair_combopart)
-        self.__add_changeable_image_to_layout(self.layout, self._fashion_combopart)
-        self.__add_changeable_image_to_layout(self.layout, self._mgif_combopart)
-        self.__add_changeable_image_to_layout(self.layout, self._nemo_combopart)
-        self.__add_changeable_image_to_layout(self.layout, self._taichi_adv_combopart)
-        self.__add_changeable_image_to_layout(self.layout, self._taichi_combopart)
-        self.__add_changeable_image_to_layout(self.layout, self._vox_adv_combopart)
-        self.__add_changeable_image_to_layout(self.layout, self._vox_combopart)
+        self._all_combopart = [
+            self._adaptive_chxbox,
+            self._relative_chxbox,
+            *self._all_combopart
+        ]
 
         #
         # self.select_picture_btn = QtWidgets.QPushButton("Выбрать картинку")
@@ -282,9 +331,15 @@ class FormWidget(QtWidgets.QWidget):
 
         self.setLayout(self.layout)
 
-    def mousePressEvent(self, QMouseEvent):
-        # print(QMouseEvent.pos())
-        pass
+    # def mouseMoveEvent(self, e):
+    #     for img in self._all_changeable_images:
+    #         img.change_state(e.pos())
+
+    def mousePressEvent(self, e):
+        print(e.pos())
+
+        for part in self._all_combopart:
+            part.change_state(e.pos(), True)
 
     def dragEnterEvent(self, e):
         if e.mimeData().hasImage:
@@ -442,6 +497,11 @@ class FormWidget(QtWidgets.QWidget):
         return a_region_begin.x() <= a_point.x() <= a_region_end.x() and a_region_begin.y() <= a_point.y() <= a_region_end.y()
 
 
+class Flag(object):
+    def __init__(self):
+        self.value = False
+
+
 class ChangeableImage(object):
     def __init__(self,
                  a_parent,
@@ -473,10 +533,12 @@ class ChangeableImage(object):
         if self._is_point_in_region(a_pos):
             if a_is_clicked:
                 self.change_to_selected()
+                # self.flag.value = True
             else:
                 self.change_to_active()
         else:
-            self.change_to_inactive()
+            if self.selected:
+                self.change_to_inactive()
 
     def get_active_img_inst(self) -> QtWidgets.QLabel:
         return self.active_img_lbl
@@ -512,6 +574,11 @@ class ChangeableImage(object):
         self.inactive_img_lbl.move(x, y)
         self.active_img_lbl.move(x, y)
         self.selected_img_lbl.move(x, y)
+
+    def set_size(self, size):
+        self.active_img_lbl.setFixedSize(size)
+        self.inactive_img_lbl.setFixedSize(size)
+        self.selected_img_lbl.setFixedSize(size)
 
     def _is_point_in_region(self, a_point: QtCore.QPoint):
         return self.begin_region.x() <= a_point.x() <= self.end_region.x() \
