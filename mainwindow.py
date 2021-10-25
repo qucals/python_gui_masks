@@ -3,7 +3,6 @@ import sys
 from typing import Tuple
 
 from PyQt5.QtCore import QSize, QObject, pyqtSignal, QThread
-from PyQt5.QtGui import QMovie
 from PyQt5 import QtWidgets, QtCore, QtGui
 
 # import demo as slz
@@ -93,9 +92,6 @@ class FormWidget(QtWidgets.QWidget):
         # PyQt5.QtCore.QPoint(468, 1209)
         self._vox_adv_combopart_region = (QtCore.QPoint(118, 1189), QtCore.QPoint(468, 1209))
 
-        # PyQt5.QtCore.QPoint(118, 1226)
-        # PyQt5.QtCore.QPoint(468, 1247)
-
         # Convert
         # PyQt5.QtCore.QPoint(517, 1114)
         # PyQt5.QtCore.QPoint(1009, 1228)
@@ -122,44 +118,57 @@ class FormWidget(QtWidgets.QWidget):
         self.setMouseTracking(True)
 
         # - background gif
-        self.bg_gif = QtGui.QMovie(settings.background_files['bg'])
-        self.bg_gif.setScaledSize(settings.APP_SIZE)
-        self.bg_gif.start()
+        self._bg_gif = QtGui.QMovie(settings.background_files['bg'])
+        self._bg_gif.setScaledSize(settings.APP_SIZE)
+        self._bg_gif.start()
 
-        self.bg_gif_lbl = QtWidgets.QLabel(self)
-        self.bg_gif_lbl.setMovie(self.bg_gif)
+        self._bg_gif_lbl = QtWidgets.QLabel(self)
+        self._bg_gif_lbl.setMovie(self._bg_gif)
 
         # - loader
-        self.loader_gif = QtGui.QMovie(settings.button_files['loading'])
-        self.loader_gif.setScaledSize(QSize(349, 245))
-        self.loader_gif.jumpToFrame(0)
+        self._loader_gif = QtGui.QMovie(settings.button_files['loading'])
+        self._loader_gif.setScaledSize(QSize(349, 245))
+        self._loader_gif.jumpToFrame(0)
 
-        self.loader_gif_lbl = QtWidgets.QLabel(self)
-        self.loader_gif_lbl.setMovie(self.loader_gif)
-        self.loader_gif_lbl.setFixedSize(QSize(349, 245))
-        self.loader_gif_lbl.move(572, 785)
+        self._loader_gif_lbl = QtWidgets.QLabel(self)
+        self._loader_gif_lbl.setMovie(self._loader_gif)
+        self._loader_gif_lbl.setFixedSize(QSize(349, 245))
+        self._loader_gif_lbl.move(572, 785)
 
         # - overlay
-        self.overlay_lbl = QtWidgets.QLabel()
-        self.overlay_lbl.setPixmap(QtGui.QPixmap(settings.background_files['overlay']))
+        self._overlay_lbl = QtWidgets.QLabel()
+        self._overlay_lbl.setPixmap(QtGui.QPixmap(settings.background_files['overlay']))
+
+        # - convert button
+        self._convert_btn = InvisibleButton(
+            a_parent=self,
+            a_region=self._convert_btn_region
+        )
+        # self._convert_btn.clicked.connect(
+        #     lambda: self._test()
+        # )
 
         # - checkbox
-        self._adaptive_chxbox = ChangeableImage(
+        self._checkbox_select_controller = SelectController()
+
+        self._adaptive_chxbox = ComboItem(
             a_parent=self,
             a_active_img=QtGui.QPixmap(),
             a_inactive_img=QtGui.QPixmap(),
             a_selected_img=QtGui.QPixmap(settings.button_files['checkbox']),
-            a_region=self._adaptive_checkbox_region
+            a_region=self._adaptive_checkbox_region,
+            a_select_controller=self._checkbox_select_controller
         )
         self._adaptive_chxbox.move(1036, 760)
         self._adaptive_chxbox.set_size(QSize(89, 107))
 
-        self._relative_chxbox = ChangeableImage(
+        self._relative_chxbox = ComboItem(
             a_parent=self,
             a_active_img=QtGui.QPixmap(),
             a_inactive_img=QtGui.QPixmap(),
             a_selected_img=QtGui.QPixmap(settings.button_files['checkbox']),
-            a_region=self._relative_checkbox_region
+            a_region=self._relative_checkbox_region,
+            a_select_controller=self._checkbox_select_controller
         )
         self._relative_chxbox.move(1036, 900)
         self._relative_chxbox.set_size(QSize(89, 107))
@@ -172,7 +181,7 @@ class FormWidget(QtWidgets.QWidget):
             a_region=self._drag_left_region
         )
 
-        self.left_drag_icon = ChangeableImage(
+        self.left_drag_icon = ImageButton(
             a_parent=self,
             a_inactive_img=QtGui.QPixmap(settings.button_files['photo']),
             a_active_img=QtGui.QPixmap(settings.button_files['photo_selection']),
@@ -186,7 +195,7 @@ class FormWidget(QtWidgets.QWidget):
             a_region=self._drag_right_region
         )
 
-        self.right_drag_icon = ChangeableImage(
+        self.right_drag_icon = ImageButton(
             a_parent=self,
             a_inactive_img=QtGui.QPixmap(settings.button_files['video']),
             a_active_img=QtGui.QPixmap(settings.button_files['video_selection']),
@@ -195,104 +204,65 @@ class FormWidget(QtWidgets.QWidget):
 
         # - combobox
         # TODO: Можно автоматизировать
-        self._bair_combopart = ChangeableImage(
-            a_parent=self,
-            a_inactive_img=QtGui.QPixmap(settings.font_files['bair_256']),
-            a_active_img=QtGui.QPixmap(settings.font_files['bair_256s']),
-            a_selected_img=QtGui.QPixmap(settings.font_files['bair_256ss']),
-            a_region=self._bair_combopart_region
-        )
 
-        self._fashion_combopart = ChangeableImage(
-            a_parent=self,
-            a_inactive_img=QtGui.QPixmap(settings.font_files['fashion_256']),
-            a_active_img=QtGui.QPixmap(settings.font_files['fashion_256s']),
-            a_selected_img=QtGui.QPixmap(settings.font_files['fashion_256ss']),
-            a_region=self._fashion_combopart_region
-        )
+        comboparts = {
+            'bair': ([path for file, path in settings.font_files.items() if 'bair_' in file], self._bair_combopart_region),
+            'fashion': ([path for file, path in settings.font_files.items() if 'fashion_' in file], self._fashion_combopart_region),
+            'mgif': ([path for file, path in settings.font_files.items() if 'mgif_' in file], self._mgif_combopart_region),
+            'nemo': ([path for file, path in settings.font_files.items() if 'nemo_' in file], self._nemo_combopart_region),
+            'taichi_adv': ([path for file, path in settings.font_files.items() if 'taichi-adv_' in file], self._taichi_adv_combopart_region),
+            'taichi': ([path for file, path in settings.font_files.items() if 'taichi_' in file], self._taichi_combopart_region),
+            'vox_adv': ([path for file, path in settings.font_files.items() if 'vox-adv_' in file], self._vox_adv_combopart_region),
+            'vox': ([path for file, path in settings.font_files.items() if 'vox_' in file], self._vox_combopart_region),
+        }
 
-        self._mgif_combopart = ChangeableImage(
-            a_parent=self,
-            a_inactive_img=QtGui.QPixmap(settings.font_files['mgif_256']),
-            a_active_img=QtGui.QPixmap(settings.font_files['mgif_256s']),
-            a_selected_img=QtGui.QPixmap(settings.font_files['mgif_256ss']),
-            a_region=self._mgif_combopart_region
-        )
+        self._combo_select_controller = SelectController()
 
-        self._nemo_combopart = ChangeableImage(
-            a_parent=self,
-            a_inactive_img=QtGui.QPixmap(settings.font_files['nemo_256']),
-            a_active_img=QtGui.QPixmap(settings.font_files['nemo_256s']),
-            a_selected_img=QtGui.QPixmap(settings.font_files['nemo_256ss']),
-            a_region=self._nemo_combopart_region
-        )
+        for name, args in comboparts.items():
+            img_paths, region = args
+            imgs = [QtGui.QPixmap(path) for path in sorted(img_paths)]
+            setattr(self, f'_{name}_combopart', ImageButton(
+                a_parent=self,
+                a_inactive_img=imgs[0],
+                a_active_img=imgs[1],
+                a_selected_img=imgs[2],
+                a_region=region,
+                a_select_controller=self._combo_select_controller
+            ))
 
-        self._taichi_adv_combopart = ChangeableImage(
-            a_parent=self,
-            a_inactive_img=QtGui.QPixmap(settings.font_files['taichi-adv_256']),
-            a_active_img=QtGui.QPixmap(settings.font_files['taichi-adv_256s']),
-            a_selected_img=QtGui.QPixmap(settings.font_files['taichi-adv_256ss']),
-            a_region=self._taichi_adv_combopart_region
-        )
-
-        self._taichi_combopart = ChangeableImage(
-            a_parent=self,
-            a_inactive_img=QtGui.QPixmap(settings.font_files['taichi_256']),
-            a_active_img=QtGui.QPixmap(settings.font_files['taichi_256s']),
-            a_selected_img=QtGui.QPixmap(settings.font_files['taichi_256ss']),
-            a_region=self._taichi_combopart_region
-        )
-
-        self._vox_adv_combopart = ChangeableImage(
-            a_parent=self,
-            a_inactive_img=QtGui.QPixmap(settings.font_files['vox-adv_256']),
-            a_active_img=QtGui.QPixmap(settings.font_files['vox-adv_256s']),
-            a_selected_img=QtGui.QPixmap(settings.font_files['vox-adv_256ss']),
-            a_region=self._vox_adv_combopart_region
-        )
-
-        self._vox_combopart = ChangeableImage(
-            a_parent=self,
-            a_inactive_img=QtGui.QPixmap(settings.font_files['vox_256']),
-            a_active_img=QtGui.QPixmap(settings.font_files['vox_256s']),
-            a_selected_img=QtGui.QPixmap(settings.font_files['vox_256ss']),
-            a_region=self._vox_combopart_region
-        )
-
-        self._all_combopart = [
-            self._bair_combopart,
-            self._fashion_combopart,
-            self._mgif_combopart,
-            self._nemo_combopart,
-            self._taichi_adv_combopart,
-            self._taichi_combopart,
-            self._vox_adv_combopart,
-            self._vox_combopart,
+        self._chbox_parts = [
+            self._adaptive_chxbox,
+            self._relative_chxbox,
         ]
+
+        self._combo_parts = {
+            'bair': self._bair_combopart,
+            'fashion': self._fashion_combopart,
+            'mgif': self._mgif_combopart,
+            'nemo': self._nemo_combopart,
+            'taichi-adv': self._taichi_adv_combopart,
+            'taichi': self._taichi_combopart,
+            'vox-adv': self._vox_adv_combopart,
+            'vox': self._vox_combopart,
+        }
 
         self._all_changeable_images = [
             self.left_drag_overlay,
             self.left_drag_icon,
             self.right_drag_overlay,
             self.right_drag_icon,
-            *self._all_combopart
+            *self._combo_parts.values()
         ]
 
         # - layout
         self.layout = QtWidgets.QGridLayout(self)
         self.layout.setContentsMargins(0, 0, 0, 0)
 
-        self.layout.addWidget(self.bg_gif_lbl, 0, 0)
-        self.layout.addWidget(self.overlay_lbl, 0, 0)
+        self.layout.addWidget(self._bg_gif_lbl, 0, 0)
+        self.layout.addWidget(self._overlay_lbl, 0, 0)
 
         for img in self._all_changeable_images:
             self.__add_changeable_image_to_layout(self.layout, img)
-
-        self._all_combopart = [
-            self._adaptive_chxbox,
-            self._relative_chxbox,
-            *self._all_combopart
-        ]
 
         #
         # self.select_picture_btn = QtWidgets.QPushButton("Выбрать картинку")
@@ -338,32 +308,20 @@ class FormWidget(QtWidgets.QWidget):
     def mousePressEvent(self, e):
         print(e.pos())
 
-        for part in self._all_combopart:
+        for part in self._combo_parts.values():
             part.change_state(e.pos(), True)
 
+        for part in self._chbox_parts:
+            part.change_state(e.pos(), True)
+
+        if self._convert_btn.is_clicked(e.pos()):
+            print('clicked')
+
     def dragEnterEvent(self, e):
-        if e.mimeData().hasImage:
-            self.left_drag_overlay.change_state(e.pos())
-            self.left_drag_icon.change_state(e.pos())
-
-            self.right_drag_overlay.change_state(e.pos())
-            self.right_drag_icon.change_state(e.pos())
-
-            e.accept()
-        else:
-            e.ignore()
+        self.dropEvent(e)
 
     def dragMoveEvent(self, e):
-        if e.mimeData().hasImage:
-            self.left_drag_overlay.change_state(e.pos())
-            self.left_drag_icon.change_state(e.pos())
-
-            self.right_drag_overlay.change_state(e.pos())
-            self.right_drag_icon.change_state(e.pos())
-
-            e.accept()
-        else:
-            e.ignore()
+        self.dropEvent(e)
 
     def dragLeaveEvent(self, e):
         self.left_drag_overlay.change_to_inactive()
@@ -485,7 +443,7 @@ class FormWidget(QtWidgets.QWidget):
     def __add_changeable_image_to_layout(a_layout: QtWidgets.QGridLayout, a_img):
         if isinstance(a_img, FadingImage):
             a_layout.addWidget(a_img.get_img_inst(), 0, 0)
-        elif isinstance(a_img, ChangeableImage):
+        elif isinstance(a_img, ImageButton):
             a_layout.addWidget(a_img.get_active_img_inst(), 0, 0)
             a_layout.addWidget(a_img.get_inactive_img_inst(), 0, 0)
             a_layout.addWidget(a_img.get_selected_img_inst(), 0, 0)
@@ -494,23 +452,30 @@ class FormWidget(QtWidgets.QWidget):
 
     @staticmethod
     def __is_point_in_region(a_point: QtCore.QPoint, a_region_begin: QtCore.QPoint, a_region_end: QtCore.QPoint):
-        return a_region_begin.x() <= a_point.x() <= a_region_end.x() and a_region_begin.y() <= a_point.y() <= a_region_end.y()
+        return a_region_begin.x() <= a_point.x() <= a_region_end.x() and \
+               a_region_begin.y() <= a_point.y() <= a_region_end.y()
 
 
-class Flag(object):
+class SelectController(object):
     def __init__(self):
-        self.value = False
+        self.selected_inst = None
 
+    def set_selected(self, a_inst):
+        self.selected_inst = a_inst
+        
 
-class ChangeableImage(object):
-    def __init__(self,
-                 a_parent,
-                 a_active_img: QtGui.QPixmap,
-                 a_inactive_img: QtGui.QPixmap,
-                 a_region: Tuple[QtCore.QPoint, QtCore.QPoint],
-                 a_selected_img: QtGui.QPixmap = None):
+class ImageButton(QObject):
+    def __init__(self, a_parent, a_active_img: QtGui.QPixmap, a_inactive_img: QtGui.QPixmap,
+                 a_region: Tuple[QtCore.QPoint, QtCore.QPoint], a_selected_img: QtGui.QPixmap = None,
+                 a_select_controller: SelectController = None):
+        super(ImageButton, self).__init__(a_parent)
+
         if a_selected_img is None:
             a_selected_img = QtGui.QPixmap()
+        if a_select_controller is None:
+            a_select_controller = SelectController()
+
+        self.select_controller = a_select_controller
 
         self.inactive_img_lbl = QtWidgets.QLabel(a_parent)
         self.inactive_img_lbl.setPixmap(a_inactive_img)
@@ -532,13 +497,20 @@ class ChangeableImage(object):
     def change_state(self, a_pos, a_is_clicked=False):
         if self._is_point_in_region(a_pos):
             if a_is_clicked:
+                if self.select_controller.selected_inst != self:
+                    if self.select_controller.selected_inst is not None:
+                        self.select_controller.selected_inst.change_to_inactive()
+                    self.select_controller.set_selected(self)
                 self.change_to_selected()
-                # self.flag.value = True
             else:
-                self.change_to_active()
+                if self.activated:
+                    self.change_to_inactive()
+                else:
+                    self.change_to_active()
         else:
             if self.selected:
-                self.change_to_inactive()
+                if self.select_controller.selected_inst is not None and self.select_controller.selected_inst != self:
+                    self.change_to_inactive()
 
     def get_active_img_inst(self) -> QtWidgets.QLabel:
         return self.active_img_lbl
@@ -570,6 +542,9 @@ class ChangeableImage(object):
         self.inactive_img_lbl.setVisible(False)
         self.selected_img_lbl.setVisible(True)
 
+    def is_selected(self):
+        return self.selected
+
     def move(self, x, y):
         self.inactive_img_lbl.move(x, y)
         self.active_img_lbl.move(x, y)
@@ -585,7 +560,22 @@ class ChangeableImage(object):
                and self.begin_region.y() <= a_point.y() <= self.end_region.y()
 
 
-class FadingImage(ChangeableImage):
+class ComboItem(ImageButton):
+    def __init__(self, a_parent, a_active_img: QtGui.QPixmap, a_inactive_img: QtGui.QPixmap,
+                 a_selected_img: QtGui.QPixmap, a_region: Tuple[QtCore.QPoint, QtCore.QPoint],
+                 a_select_controller: SelectController):
+        super().__init__(a_parent, a_active_img, a_inactive_img, a_region, a_selected_img, a_select_controller)
+
+    def change_state(self, a_pos, a_is_clicked=False):
+        if self._is_point_in_region(a_pos):
+            if a_is_clicked:
+                if self.selected:
+                    self.change_to_inactive()
+                else:
+                    self.change_to_selected()
+
+
+class FadingImage(ImageButton):
     def __init__(self, a_parent, a_img: QtGui.QPixmap, a_region: Tuple[QtCore.QPoint, QtCore.QPoint]):
         super(FadingImage, self).__init__(a_parent, a_img, QtGui.QPixmap(), a_region)
 
@@ -594,3 +584,11 @@ class FadingImage(ChangeableImage):
 
     def move(self, x, y):
         self.active_img_lbl.move(x, y)
+
+
+class InvisibleButton(ImageButton):
+    def __init__(self, a_parent, a_region: Tuple[QtCore.QPoint, QtCore.QPoint]):
+        super().__init__(a_parent, QtGui.QPixmap(), QtGui.QPixmap(), a_region)
+
+    def is_clicked(self, e_pos):
+        return self._is_point_in_region(e_pos)
