@@ -6,7 +6,7 @@ from music import FilesLoader, SoundsController
 from PyQt5.QtCore import QSize, QObject, pyqtSignal, QThread, Qt
 from PyQt5 import QtWidgets, QtCore, QtGui
 
-# import demo as slz
+import demo as slz
 from cv2 import cv2
 
 import settings
@@ -42,8 +42,18 @@ def get_picture_of_video(a_path, a_size):
 class Worker(QObject):
     finished = pyqtSignal()
 
+    def __init__(self, a_args):
+        super().__init__()
+        # self.args = a_args
+
     def run(self):
-        # slz.main()
+        try:
+            # os_str = 'python3 demo.py {}'.format(' '.join(self.args))
+            # print(os_str)
+            # os.system(os_str)
+            slz.main()
+        except (Exception,):
+            pass
         self.finished.emit()
 
 
@@ -268,8 +278,6 @@ class FormWidget(QtWidgets.QWidget):
         self.setLayout(self.layout)
 
     def mousePressEvent(self, e):
-        print(e.pos())
-
         for part in self._combo_parts.values():
             part.change_state(e.pos(), True, self.sounds_controller, 'choose_method')
 
@@ -362,7 +370,7 @@ class FormWidget(QtWidgets.QWidget):
 
     def _convert(self, _a_disable_checks=False):
         if _a_disable_checks:
-            self.__convert()
+            self.__start_thread_to_convert([])
         else:
             if self.selected_picture is None:
                 show_message_box('Ошибка', 'Картинка не выбрана', QtWidgets.QMessageBox.Critical)
@@ -377,17 +385,17 @@ class FormWidget(QtWidgets.QWidget):
                 if dirname != '':
                     result_path = os.path.join(dirname, 'result.mp4')
 
-                    new_args = ['--config', self.__selected_config, '--checkpoint', self.__selected_checkpoint,
-                                '--source_image', self.selected_picture, '--driving_video', self.selected_video,
-                                '--result_video', result_path]
+                    args = ['--config', f'"{self.__selected_config}"', '--checkpoint', f'"{self.__selected_checkpoint}"',
+                            '--source_image', f'"{self.selected_picture}"', '--driving_video', f'"{self.selected_video}"',
+                            '--result_video', f'"{result_path}"']
 
                     if self._adaptive_chxbox.selected:
-                        new_args.append('--adapt_scale')
+                        args.append('--adapt_scale')
                     if self._relative_chxbox.selected:
-                        new_args.append('--relative')
+                        args.append('--relative')
 
-                    sys.argv = sys.argv + new_args
-                    self.__convert()
+                    sys.argv = sys.argv + args
+                    self.__start_thread_to_convert(args)
 
     def _load_methods(self):
         config_path = 'config'
@@ -419,9 +427,9 @@ class FormWidget(QtWidgets.QWidget):
                 else:
                     self.methods[file] = (file_path, checkpoints[file])
 
-    def __convert(self):
+    def __start_thread_to_convert(self, a_args):
         self.thread = QThread()
-        self.worker = Worker()
+        self.worker = Worker(a_args)
 
         self.worker.moveToThread(self.thread)
         self.thread.started.connect(self.worker.run)

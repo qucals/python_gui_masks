@@ -64,7 +64,7 @@ class AppInfo:
 
 
 def build_app(a_main_filename: str, a_app_info: AppInfo, a_icon_filename: str = "", a_noconsole=True,
-              a_one_file=True, a_libs: List[str] = None):
+              a_one_file=True, a_libs: List[str] = None, a_output_path = None):
     """
     Запускает сборку через pyinstaller с заданными параметрами.
     :param a_main_filename: Имя файла главного скрипта
@@ -80,7 +80,12 @@ def build_app(a_main_filename: str, a_app_info: AppInfo, a_icon_filename: str = 
     icon = " --icon={}".format(a_icon_filename) if a_icon_filename else ""
     add_data_sep = ";" if os.name == 'nt' else ":"
     libs = "".join((' --add-data "{}"{}.'.format(lib, add_data_sep) for lib in a_libs)) if a_libs is not None else ""
-    os.system("pyinstaller{}{}{}{}{} {}".format(name, onefile, noconsole, icon, libs, a_main_filename))
+
+    outstr = "{}{}{}{}{}".format(name, onefile, noconsole, icon, libs)
+    if a_output_path is not None:
+        outstr += ' --workpath {}'.format(a_output_path)
+
+    os.system("pyinstaller {} {}".format(outstr, a_main_filename))
 
 
 if __name__ == '__main__':
@@ -89,4 +94,5 @@ if __name__ == '__main__':
     build_app(a_main_filename="main.py",
               a_app_info=app_info,
               a_noconsole=True,
-              a_one_file=True)
+              a_one_file=True,
+              a_output_path=os.path.dirname(os.path.abspath(__file__)))
