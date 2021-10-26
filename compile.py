@@ -80,25 +80,13 @@ def build_app(a_main_filename: str, a_app_info: AppInfo, a_icon_filename: str = 
     icon = " --icon={}".format(a_icon_filename) if a_icon_filename else ""
     add_data_sep = ";" if os.name == 'nt' else ":"
     libs = "".join((' --add-data "{}"{}.'.format(lib, add_data_sep) for lib in a_libs)) if a_libs is not None else ""
-
-    version_filename = "version.txt"
-    with open(version_filename, 'w', encoding="utf8") as version_file:
-        version_file.write(version_file_content.format(
-            company_name=a_app_info.company_name, file_description=a_app_info.file_description,
-            version=a_app_info.version, internal_name=a_app_info.internal_name, copyright=a_app_info.copyright,
-            original_filename=a_app_info.original_filename, product_name=a_app_info.product_name
-        ))
-        version = " --version-file={}".format(version_filename)
-
-    os.system("pyinstaller{}{}{}{}{}{} {}".format(name, onefile, noconsole, icon, version, libs, a_main_filename))
-
-    os.remove(version_filename)
+    os.system("pyinstaller{}{}{}{}{} {}".format(name, onefile, noconsole, icon, libs, a_main_filename))
 
 
 if __name__ == '__main__':
     app_info = AppInfo(a_app_name='Gavno')
 
     build_app(a_main_filename="main.py",
-               a_app_info=app_info,
-               a_noconsole=True,
-               a_one_file=True)
+              a_app_info=app_info,
+              a_noconsole=True,
+              a_one_file=True)

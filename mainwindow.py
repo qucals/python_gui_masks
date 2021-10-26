@@ -1,11 +1,12 @@
 import os.path
 import sys
-from typing import Tuple
 
+from typing import Tuple
+from music import FilesLoader, SoundsController
 from PyQt5.QtCore import QSize, QObject, pyqtSignal, QThread, Qt
 from PyQt5 import QtWidgets, QtCore, QtGui
 
-import demo as slz
+# import demo as slz
 from cv2 import cv2
 
 import settings
@@ -42,7 +43,7 @@ class Worker(QObject):
     finished = pyqtSignal()
 
     def run(self):
-        slz.main()
+        # slz.main()
         self.finished.emit()
 
 
@@ -64,6 +65,9 @@ class MainWindow(QtWidgets.QMainWindow):
 class FormWidget(QtWidgets.QWidget):
     def __init__(self, parent, *args, **kwargs):
         super(FormWidget, self).__init__(parent, *args, **kwargs)
+
+        self.parent = parent
+        self.sounds_controller = SoundsController(FilesLoader.load('ui_sounds'))
 
         self.methods = {}
         self.selected_picture = None
@@ -267,10 +271,10 @@ class FormWidget(QtWidgets.QWidget):
         print(e.pos())
 
         for part in self._combo_parts.values():
-            part.change_state(e.pos(), True)
+            part.change_state(e.pos(), True, self.sounds_controller, 'choose_method')
 
-        for part in self._chbox_parts:
-            part.change_state(e.pos(), True)
+        self._chbox_parts[0].change_state(e.pos(), True, self.sounds_controller, 'adaptive')
+        self._chbox_parts[1].change_state(e.pos(), True, self.sounds_controller, 'relative')
 
         if self._user_agreement_btn.is_clicked(e.pos()):
             self.open_user_agreement()
@@ -308,12 +312,14 @@ class FormWidget(QtWidgets.QWidget):
             self.left_drag_icon.change_state(e.pos())
 
             if self.left_drag_overlay.activated:
+                self.sounds_controller.play('image')
                 self.load_picture(e.mimeData().urls()[0].toLocalFile())
 
             self.right_drag_overlay.change_state(e.pos())
             self.right_drag_icon.change_state(e.pos())
 
             if self.right_drag_overlay.activated:
+                self.sounds_controller.play('video')
                 self.load_video(e.mimeData().urls()[0].toLocalFile())
 
             self.dragLeaveEvent(e)
@@ -339,8 +345,10 @@ class FormWidget(QtWidgets.QWidget):
         self._picture_of_video.setPixmap(img)
 
     def open_user_agreement(self):
+        self.sounds_controller.play('agreement', a_auto_restart=True)
         dialog = UserAgreementDialog(self)
         dialog.exec()
+        self.sounds_controller.stop('agreement')
 
     def _select_picture(self):
         filename, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Выбрать файл", ".")
@@ -428,10 +436,12 @@ class FormWidget(QtWidgets.QWidget):
         )
 
     def __start_converting_ui(self):
+        self.sounds_controller.play('conditions', a_auto_restart=True)
         self.setEnabled(False)
         self._loader_gif.start()
 
     def __stop_converting_ui(self):
+        self.sounds_controller.stop('conditions')
         self.setEnabled(True)
         self._loader_gif.jumpToFrame(0)
         self._loader_gif.stop()
@@ -504,7 +514,8 @@ class ImageButton(QObject):
         self._is_hidden = False
         self._save_visible_inst = None
 
-    def change_state(self, a_pos, a_is_clicked=False):
+    def change_state(self, a_pos, a_is_clicked=False,
+                     a_sounds_controller: SoundsController = None, a_sound_name: str = None):
         if self._is_hidden:
             return
 
@@ -516,6 +527,8 @@ class ImageButton(QObject):
                             self.select_controller.selected_inst.change_to_inactive()
                         self.select_controller.set_selected(self)
                 self.change_to_selected()
+                if a_sounds_controller is not None and a_sound_name is not None:
+                    a_sounds_controller.play(a_sound_name)
             else:
                 if self.activated:
                     self.change_to_inactive()
@@ -606,13 +619,15 @@ class ComboItem(ImageButton):
                  a_select_controller: SelectController):
         super().__init__(a_parent, a_active_img, a_inactive_img, a_region, a_selected_img, a_select_controller)
 
-    def change_state(self, a_pos, a_is_clicked=False):
+    def change_state(self, a_pos, a_is_clicked=False,
+                     a_sounds_controller: SoundsController = None, a_sound_name: str = None):
         if self._is_point_in_region(a_pos):
             if a_is_clicked:
                 if self.selected:
                     self.change_to_inactive()
                 else:
                     self.change_to_selected()
+                a_sounds_controller.play(a_sound_name)
 
 
 class FadingImage(ImageButton):
