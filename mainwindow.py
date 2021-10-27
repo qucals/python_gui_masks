@@ -6,7 +6,6 @@ from music import FilesLoader, SoundsController
 from PyQt5.QtCore import QSize, QObject, pyqtSignal, QThread, Qt
 from PyQt5 import QtWidgets, QtCore, QtGui
 
-import demo as slz
 from cv2 import cv2
 
 import settings
@@ -44,14 +43,13 @@ class Worker(QObject):
 
     def __init__(self, a_args):
         super().__init__()
-        # self.args = a_args
+        self.args = a_args
 
     def run(self):
         try:
-            # os_str = 'python3 demo.py {}'.format(' '.join(self.args))
-            # print(os_str)
-            # os.system(os_str)
-            slz.main()
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            os_str = 'python3 {} {}'.format(os.path.join(current_dir, 'demo.py'), ' '.join(self.args))
+            os.system(os_str)
         except (Exception,):
             pass
         self.finished.emit()
@@ -394,7 +392,6 @@ class FormWidget(QtWidgets.QWidget):
                     if self._relative_chxbox.selected:
                         args.append('--relative')
 
-                    sys.argv = sys.argv + args
                     self.__start_thread_to_convert(args)
 
     def _load_methods(self):

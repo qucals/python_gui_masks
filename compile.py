@@ -94,5 +94,4 @@ if __name__ == '__main__':
     build_app(a_main_filename="main.py",
               a_app_info=app_info,
               a_noconsole=True,
-              a_one_file=True,
-              a_output_path=os.path.dirname(os.path.abspath(__file__)))
+              a_one_file=True)
