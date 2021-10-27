@@ -50,8 +50,8 @@ class Worker(QObject):
             current_dir = os.path.dirname(os.path.abspath(__file__))
             os_str = 'python3 {} {}'.format(os.path.join(current_dir, 'demo.py'), ' '.join(self.args))
             os.system(os_str)
-        except (Exception,):
-            pass
+        except (Exception,) as e:
+            print(e)
         self.finished.emit()
 
 

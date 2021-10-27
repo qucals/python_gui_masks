@@ -8,11 +8,14 @@ from mainwindow import MainWindow
 
 def install_requirements():
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    os.system('pytho3 -m pip install {}'.format(os.path.join(current_dir, 'requirements.txt')))
+    os.system('python3 -m pip install -r {}'.format(os.path.join(current_dir, 'requirements.txt')))
 
 
 def main():
-    install_requirements()
+    try:
+        install_requirements()
+    except Exception:
+        pass
 
     app = QApplication(sys.argv)
     window = MainWindow()
